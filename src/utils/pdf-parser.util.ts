@@ -1,13 +1,11 @@
 // utils/pdf-parser.ts
 import fs from 'fs/promises';
 import path from 'path';
-const pdfParse = require('pdf-parse');
+import { PDFParse } from "pdf-parse";
 import { Document } from "@langchain/core/documents";
 
 export interface ParsedPDFData {
   text: string;
-  metadata: PDFMetadata;
-  pages?: PageData[];
 }
 
 export interface PDFMetadata {
@@ -51,43 +49,17 @@ export async function parsePDF(
   } = options;
 
   try {
-    // Read the PDF file
-    const dataBuffer = await fs.readFile(filePath);
-    const fileStats = await fs.stat(filePath);
-    
-    // Parse PDF with pdf-parse
-    const pdfData = await pdfParse(dataBuffer, {
-      max: maxPages,
-      password,
-    });
-    
-    // Extract metadata
-    const metadata: PDFMetadata = {
-      title: pdfData.info?.Title || path.basename(filePath, '.pdf'),
-      author: pdfData.info?.Author,
-      subject: pdfData.info?.Subject,
-      keywords: pdfData.info?.Keywords?.split(',').map((k:String) => k.trim()),
-      creator: pdfData.info?.Creator,
-      producer: pdfData.info?.Producer,
-      creationDate: pdfData.info?.CreationDate ? new Date(pdfData.info.CreationDate) : undefined,
-      modDate: pdfData.info?.ModDate ? new Date(pdfData.info.ModDate) : undefined,
-      pageCount: pdfData.numpages,
-      fileSize: fileStats.size,
-      fileName: path.basename(filePath),
-    };
-    
-    // Extract page data if requested
-    const pages = storePageData ? extractPages(pdfData.text, pdfData.numpages) : undefined;
-    
+    const parser = new PDFParse({ url: filePath });
+    const result = await parser.getText();
+
     return {
-      text: pdfData.text,
-      metadata,
-      pages,
+      text: result.text,
     };
-    
   } catch (error) {
     console.error(`Failed to parse PDF: ${filePath}`, error);
-    throw new Error(`PDF parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `PDF parsing failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -152,16 +124,12 @@ export function pdfToLangChainDocuments(
   
   // Create document for each chunk
   chunks.forEach((chunk, index) => {
-    const metadata: Record<string, any> = includeMetadata ? {
-      source: parsedData.metadata.fileName,
-      title: parsedData.metadata.title,
-      author: parsedData.metadata.author,
-      pageCount: parsedData.metadata.pageCount,
-      chunkIndex: index,
-      totalChunks: chunks.length,
-      fileSize: parsedData.metadata.fileSize,
-      createdDate: parsedData.metadata.creationDate,
-    } : {};
+    const metadata: Record<string, any> = includeMetadata
+      ? {
+          chunkIndex: index,
+          totalChunks: chunks.length,
+        }
+      : {};
     
     documents.push(new Document({
       pageContent: chunk,
@@ -211,14 +179,9 @@ function splitTextIntoChunks(text: string, chunkSize: number, overlap: number): 
  */
 export function getPDFStats(parsedData: ParsedPDFData) {
   return {
-    pageCount: parsedData.metadata.pageCount,
     characterCount: parsedData.text.length,
     wordCount: parsedData.text.split(/\s+/).length,
     estimatedTokens: Math.ceil(parsedData.text.length / 4),
-    fileSize: `${(parsedData.metadata.fileSize / 1024).toFixed(2)} KB`,
-    fileName: parsedData.metadata.fileName,
-    title: parsedData.metadata.title,
-    author: parsedData.metadata.author,
   };
 }
 

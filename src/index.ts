@@ -116,7 +116,7 @@ process.on("SIGINT", gracefulShutdown);
 process.on("uncaughtException", (error) => {
   logger.error("Uncaught Exception:", error);
   gracefulShutdown();
-});
+}); 
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (reason, promise) => {

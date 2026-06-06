@@ -21,7 +21,7 @@ export const processDocuments = async (req: Request, res: Response) => {
         success: false,
         message: "Please provide an array of URLs",
       });
-    }
+    } 
 
     logger.info(`Processing ${urls.length} documents`);
 
@@ -108,7 +108,7 @@ export const queryDocuments = async (req: Request, res: Response) => {
  */
 export const getStats = async (req: Request, res: Response) => {
   try {
-    const stats = await vectorService.getStats();
+    const stats = await vectorService.getCollectionStats();
 
     return res.status(200).json({
       success: true,

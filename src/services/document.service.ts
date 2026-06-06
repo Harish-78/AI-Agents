@@ -7,7 +7,6 @@ export interface ProcessResult {
   url: string;
   success: boolean;
   documentCount: number;
-  pageCount: number;
   error?: string;
 }
 
@@ -30,14 +29,13 @@ export class DocumentService {
         // Create documents from PDF
         const documents = this.createDocuments(pdfData, url, options);
         
-        allDocuments.push(...documents);
+        allDocuments.push(...documents);     
         
         results.push({
           url,
           success: true,
           documentCount: documents.length,
-          pageCount: pdfData.metadata.pageCount,
-        });
+        }); 
         
         logger.info(`Successfully processed: ${url} (${documents.length} chunks)`);
       } catch (error) {
@@ -46,7 +44,6 @@ export class DocumentService {
           url,
           success: false,
           documentCount: 0,
-          pageCount: 0,
           error: error instanceof Error ? error.message : "Unknown error",
         });
       }
@@ -74,11 +71,8 @@ export class DocumentService {
         pageContent: chunks[i],
         metadata: {
           source: sourceUrl,
-          title: pdfData.metadata.title || "Untitled",
-          pageCount: pdfData.metadata.pageCount,
           chunkIndex: i,
           totalChunks: chunks.length,
-          fileName: pdfData.metadata.fileName,
         },
       });
       documents.push(doc);
